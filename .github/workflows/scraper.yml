@@ -1,4 +1,4 @@
-name: Dubizzle Toyota Scraper Bot
+name: Dubizzle Cars Scraper Bot
 
 on:
   schedule:
