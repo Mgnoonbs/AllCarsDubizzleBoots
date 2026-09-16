@@ -11,12 +11,8 @@ SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
 
 DB_FILE = "sent_ads.db"
 
-# --- قائمة الروابط المستهدفة مع تصنيفاتها ---
+# --- قائمة الروابط المستهدفة مع تصنيفاتها (بدون تويوتا) ---
 TARGET_URLS = [
-    {
-        "name": "تويوتا (جميع البائعين)",
-        "url": "https://uae.dubizzle.com/ar/motors/used-cars/toyota/?sorting=date_desc"
-    },
     {
         "name": "نيسان باترول (مالك فقط)",
         "url": "https://uae.dubizzle.com/ar/motors/used-cars/nissan/patrol/?seller_type=OW&sorting=date_desc"
@@ -188,7 +184,6 @@ def fetch_dubizzle_ads_for_target(target_info):
                 "link": full_url
             })
             
-            # جلب أول 5 إلى 10 إعلانات جديدة لكل فئة في كل دورة لتفادي الضغط وتجاوز الحد الأقصى للرسائل
             if len(ads_list) >= 5:
                 break
 
@@ -199,7 +194,7 @@ def fetch_dubizzle_ads_for_target(target_info):
 
 
 def process_and_send():
-    print("بدء جلب ومعالجة الإعلانات لجميع الفئات المستهدفة...")
+    print("بدء جلب ومعالجة الإعلانات للفئات المستهدفة...")
     
     for target in TARGET_URLS:
         ads = fetch_dubizzle_ads_for_target(target)
@@ -232,7 +227,7 @@ def process_and_send():
             if sent_success:
                 mark_sent(ad["id"])
                 print(f"تم إرسال الإعلان بنجاح: {ad['title']}")
-                time.sleep(2) # مهلة بسيطة بين كل رسالة والأخرى لتجنب حظر بوت التليجرام
+                time.sleep(2)
 
 
 if __name__ == "__main__":
