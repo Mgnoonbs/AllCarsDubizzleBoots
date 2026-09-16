@@ -11,19 +11,19 @@ SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
 
 DB_FILE = "sent_ads.db"
 
-# --- قائمة الروابط المستهدفة مع تصنيفاتها (بدون تويوتا) ---
+# --- قائمة الروابط المستهدفة (فلتر مالك أول) ---
 TARGET_URLS = [
     {
-        "name": "نيسان باترول (مالك فقط)",
-        "url": "https://uae.dubizzle.com/ar/motors/used-cars/nissan/patrol/?seller_type=OW&sorting=date_desc"
+        "name": "نيسان باترول (مالك أول)",
+        "url": "https://uae.dubizzle.com/ar/motors/used-cars/nissan/patrol/?badges=First%20Owner&sorting=date_desc"
     },
     {
-        "name": "لكزس LX-Series (مالك فقط)",
-        "url": "https://uae.dubizzle.com/ar/motors/used-cars/lexus/lx-series/?seller_type=OW&sorting=date_desc"
+        "name": "لكزس LX-Series (مالك أول)",
+        "url": "https://uae.dubizzle.com/ar/motors/used-cars/lexus/lx-series/?sorting=date_desc&badges=First%20Owner"
     },
     {
-        "name": "هيونداي (مالك فقط)",
-        "url": "https://uae.dubizzle.com/ar/motors/used-cars/hyundai/?sorting=date_desc&seller_type=OW"
+        "name": "هيونداي (مالك أول)",
+        "url": "https://uae.dubizzle.com/ar/motors/used-cars/hyundai/?sorting=date_desc&badges=First%20Owner"
     }
 ]
 
