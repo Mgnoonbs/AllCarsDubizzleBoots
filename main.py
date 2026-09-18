@@ -88,9 +88,9 @@ def mark_sent(ad_id):
     cursor.execute("INSERT OR IGNORE INTO sent_ads (ad_id) VALUES (?)", (str(ad_id),))
     conn.commit()
 
-
 def fetch_with_fallback(target_url, target_name):
-    """محاولة جلب الصفحة عبر المنصات بالترتيب: ScraperAPI -> ScrapingAnt -> ZenScraper"""
+
+    """محاولة جلب الصفحة عبر المنصات بالترتيب مع فاصل زمني لتجنب الضغط"""
     
     # 1. المحاولة الأولى عبر ScraperAPI
     if SCRAPER_API_KEY:
@@ -105,6 +105,9 @@ def fetch_with_fallback(target_url, target_name):
                 print(f"ScraperAPI فشل برمز استجابة: {res.status_code}")
         except Exception as e:
             print(f"خطأ في الاتصال بـ ScraperAPI: {e}")
+        
+        # استراحة قصيرة قبل تجربة المنصة التي تليها
+        time.sleep(3)
 
     # 2. المحاولة الثانية عبر ScrapingAnt
     if SCRAPINGANT_API_KEY:
@@ -119,6 +122,9 @@ def fetch_with_fallback(target_url, target_name):
                 print(f"ScrapingAnt فشل برمز استجابة: {res.status_code}")
         except Exception as e:
             print(f"خطأ في الاتصال بـ ScrapingAnt: {e}")
+            
+        # استراحة قصيرة قبل تجربة ZenScrape
+        time.sleep(3)
 
     # 3. المحاولة الثالثة والأخيرة عبر ZenScrape
     if ZENSCRAPE_API_KEY:
@@ -136,7 +142,6 @@ def fetch_with_fallback(target_url, target_name):
             print(f"خطأ في الاتصال بـ ZenScrape: {e}")
 
     return None
-
 
 def fetch_dubizzle_ads_for_target(target_info):
     target_name = target_info["name"]
@@ -265,8 +270,8 @@ def process_and_send():
                 print(f"تم إرسال الإعلان بنجاح: {ad['title']}")
                 time.sleep(2)
         
-        time.sleep(3)
-
+        # فترة راحة 5 ثوانٍ بين كل قسم سيارات والذي يليه لمنع حظر الطلبات المتزامنة
+        time.sleep(5)
 
 if __name__ == "__main__":
     process_and_send()
