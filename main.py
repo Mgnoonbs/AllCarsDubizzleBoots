@@ -14,6 +14,10 @@ DB_FILE = "sent_ads.db"
 # --- قائمة الروابط المستهدفة (فلتر مالك أول) ---
 TARGET_URLS = [
     {
+        "name": "تويوتا (مالك أول)",
+        "url": "https://uae.dubizzle.com/ar/motors/used-cars/toyota/?sorting=date_desc&badges=First%20Owner"
+    },
+    {
         "name": "نيسان باترول (مالك أول)",
         "url": "https://uae.dubizzle.com/ar/motors/used-cars/nissan/patrol/?badges=First%20Owner&sorting=date_desc"
     },
@@ -71,7 +75,6 @@ def send_telegram_message(chat_id, text):
 conn = sqlite3.connect(DB_FILE)
 cursor = conn.cursor()
 
-# إنشاء الجدول فقط إذا لم يكن موجوداً من قبل دون حذف البيانات القديمة
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS sent_ads (
         ad_id TEXT PRIMARY KEY
@@ -97,14 +100,15 @@ def fetch_dubizzle_ads_for_target(target_info):
     print(f"\n--- جاري فحص: {target_name} ---")
 
     if SCRAPER_API_KEY:
-        proxy_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={target_url}&render=true&keep_headers=true&cache=false"
+        # إضافة معاملات إضافية لتحسين تجاوز الحظر وحماية المواقع
+        proxy_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={target_url}&render=true&country_code=ae"
     else:
         proxy_url = target_url
 
     ads_list = []
 
     try:
-        res = requests.get(proxy_url, timeout=60)
+        res = requests.get(proxy_url, timeout=90)
         print(f"حالة الاستجابة لـ {target_name}: {res.status_code}")
 
         if res.status_code != 200:
@@ -125,7 +129,6 @@ def fetch_dubizzle_ads_for_target(target_info):
             if not href or href in seen_links:
                 continue
 
-            # التأكد أن الرابط يتبع لموقع دوبيزل للسيارات لتفادي الروابط الخارجية
             if "/motors/" not in href:
                 continue
 
@@ -228,6 +231,9 @@ def process_and_send():
                 mark_sent(ad["id"])
                 print(f"تم إرسال الإعلان بنجاح: {ad['title']}")
                 time.sleep(2)
+        
+        # فترة راحة قصيرة بين كل قسم لتقليل الضغط على البروكسي
+        time.sleep(3)
 
 
 if __name__ == "__main__":
