@@ -7,7 +7,10 @@ from bs4 import BeautifulSoup
 # --- إعدادات البوت والخدمات من متغيرات البيئة ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+
 SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
+SCRAPINGANT_API_KEY = os.getenv("SCRAPINGANT_API_KEY")
+ZENSCRAPE_API_KEY = os.getenv("ZENSCRAPE_API_KEY")
 
 DB_FILE = "sent_ads.db"
 
@@ -43,14 +46,10 @@ def send_telegram_photo(chat_id, photo_url, caption):
             "parse_mode": "Markdown"
         }
         response = requests.post(url, data=payload, timeout=20)
-        
         if response.status_code != 200:
-            print(f"فشل إرسال الصورة، جاري الإرسال كنص فقط... ({response.text})")
             return send_telegram_message(chat_id, caption)
-            
         return True
-    except Exception as e:
-        print(f"خطأ أثناء إرسال الصورة: {e}")
+    except Exception:
         return send_telegram_message(chat_id, caption)
 
 
@@ -66,8 +65,7 @@ def send_telegram_message(chat_id, text):
         }
         response = requests.post(url, data=payload, timeout=15)
         return response.status_code == 200
-    except Exception as e:
-        print(f"خطأ في إرسال تليجرام: {e}")
+    except Exception:
         return False
 
 
@@ -86,36 +84,75 @@ def is_already_sent(ad_id):
     cursor.execute("SELECT 1 FROM sent_ads WHERE ad_id = ?", (str(ad_id),))
     return cursor.fetchone() is not None
 
-
 def mark_sent(ad_id):
     cursor.execute("INSERT OR IGNORE INTO sent_ads (ad_id) VALUES (?)", (str(ad_id),))
     conn.commit()
 
 
+def fetch_with_fallback(target_url, target_name):
+    """محاولة جلب الصفحة عبر المنصات بالترتيب: ScraperAPI -> ScrapingAnt -> ZenScraper"""
+    
+    # 1. المحاولة الأولى عبر ScraperAPI
+    if SCRAPER_API_KEY:
+        proxy_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={target_url}&render=true&country_code=ae"
+        try:
+            print(f"[{target_name}] محاولة الجلب عبر ScraperAPI...")
+            res = requests.get(proxy_url, timeout=90)
+            if res.status_code == 200:
+                print(f"نجح الجلب عبر ScraperAPI بنجاح.")
+                return res.text
+            else:
+                print(f"ScraperAPI فشل برمز استجابة: {res.status_code}")
+        except Exception as e:
+            print(f"خطأ في الاتصال بـ ScraperAPI: {e}")
+
+    # 2. المحاولة الثانية عبر ScrapingAnt
+    if SCRAPINGANT_API_KEY:
+        proxy_url = f"https://api.scrapingant.com/v2/general?url={requests.utils.quote(target_url)}&x-api-key={SCRAPINGANT_API_KEY}&browser=true"
+        try:
+            print(f"[{target_name}] التحويل التلقائي إلى ScrapingAnt...")
+            res = requests.get(proxy_url, timeout=90)
+            if res.status_code == 200:
+                print(f"نجح الجلب عبر ScrapingAnt بنجاح.")
+                return res.text
+            else:
+                print(f"ScrapingAnt فشل برمز استجابة: {res.status_code}")
+        except Exception as e:
+            print(f"خطأ في الاتصال بـ ScrapingAnt: {e}")
+
+    # 3. المحاولة الثالثة والأخيرة عبر ZenScrape
+    if ZENSCRAPE_API_KEY:
+        proxy_url = f"https://app.zenscrape.com/api/v1/get?url={requests.utils.quote(target_url)}&render=true"
+        headers = {"apikey": ZENSCRAPE_API_KEY}
+        try:
+            print(f"[{target_name}] التحويل التلقائي إلى ZenScrape...")
+            res = requests.get(proxy_url, headers=headers, timeout=90)
+            if res.status_code == 200:
+                print(f"نجح الجلب عبر ZenScrape بنجاح.")
+                return res.text
+            else:
+                print(f"ZenScrape فشل برمز استجابة: {res.status_code}")
+        except Exception as e:
+            print(f"خطأ في الاتصال بـ ZenScrape: {e}")
+
+    return None
+
+
 def fetch_dubizzle_ads_for_target(target_info):
-    """جلب الإعلانات لرابط معين"""
     target_name = target_info["name"]
     target_url = target_info["url"]
     
     print(f"\n--- جاري فحص: {target_name} ---")
 
-    if SCRAPER_API_KEY:
-        # إضافة معاملات إضافية لتحسين تجاوز الحظر وحماية المواقع
-        proxy_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={target_url}&render=true&country_code=ae"
-    else:
-        proxy_url = target_url
+    html_content = fetch_with_fallback(target_url, target_name)
+
+    if not html_content:
+        print(f"فشل جلب الصفحة لجميع المنصات المتاحة لـ {target_name}")
+        return []
 
     ads_list = []
-
     try:
-        res = requests.get(proxy_url, timeout=90)
-        print(f"حالة الاستجابة لـ {target_name}: {res.status_code}")
-
-        if res.status_code != 200:
-            print(f"فشل جلب الصفحة: {res.status_code}")
-            return []
-
-        soup = BeautifulSoup(res.text, "html.parser")
+        soup = BeautifulSoup(html_content, "html.parser")
         
         listing_anchors = soup.find_all("a", attrs={"data-testid": lambda val: val and val.startswith("listing-")})
 
@@ -138,11 +175,9 @@ def fetch_dubizzle_ads_for_target(target_info):
             parts = [p for p in clean_link.split("/") if p]
             ad_id = parts[-1] if parts else str(hash(href))
 
-            # استخراج السعر
             price_elem = a.find(attrs={"data-testid": "listing-price"})
             price = price_elem.text.strip() if price_elem else "غير معلن"
 
-            # استخراج اسم وعنوان السيارة
             subheading = a.find(attrs={"data-testid": "subheading-text"})
             if subheading:
                 title = subheading.text.strip()
@@ -150,7 +185,6 @@ def fetch_dubizzle_ads_for_target(target_info):
                 headings = a.find_all(attrs={"data-testid": lambda v: v and v.startswith("heading-text-")})
                 title = " ".join([h.text.strip() for h in headings]) if headings else target_name
 
-            # استخراج السنة والكيلومترات والموقع
             year_elem = a.find(attrs={"data-testid": "listing-year"})
             year = year_elem.text.strip() if year_elem else "غير محدد"
 
@@ -160,7 +194,6 @@ def fetch_dubizzle_ads_for_target(target_info):
             loc_elem = a.find(attrs={"data-testid": "listing-location"})
             location = loc_elem.text.strip() if loc_elem else "الإمارات"
 
-            # استخراج صورة السيارة
             image_url = None
             gallery_div = a.find(attrs={"data-testid": "image-gallery"})
             if gallery_div:
@@ -197,7 +230,7 @@ def fetch_dubizzle_ads_for_target(target_info):
 
 
 def process_and_send():
-    print("بدء جلب ومعالجة الإعلانات للفئات المستهدفة...")
+    print("بدء جلب ومعالجة الإعلانات للفئات المستهدفة مع نظام التبديل التلقائي للخدمات...")
     
     for target in TARGET_URLS:
         ads = fetch_dubizzle_ads_for_target(target)
@@ -232,7 +265,6 @@ def process_and_send():
                 print(f"تم إرسال الإعلان بنجاح: {ad['title']}")
                 time.sleep(2)
         
-        # فترة راحة قصيرة بين كل قسم لتقليل الضغط على البروكسي
         time.sleep(3)
 
 
