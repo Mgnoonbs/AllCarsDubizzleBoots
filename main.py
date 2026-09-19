@@ -24,30 +24,30 @@ ZENSCRAPE_API_KEY = os.getenv("ZENSCRAPE_API_KEY")
 
 DB_FILE = "sent_ads.db"
 
-# --- قائمة الروابط المستهدفة (فلتر مالك أول) ---
+# --- قائمة الروابط المستهدفة بالروابط الجديدة المطلوبة ---
 TARGET_URLS = [
     {
         "name": "تويوتا (مالك أول)",
         "url": (
-            "https://uae.dubizzle.com/ar/motors/used-cars/toyota/?sorting=date_desc&badges=First%20Owner"
+            "https://uae.dubizzle.com/ar/motors/used-cars/toyota/?sorting=date_desc&seller_type=OW"
         ),
     },
     {
         "name": "نيسان باترول (مالك أول)",
         "url": (
-            "https://uae.dubizzle.com/ar/motors/used-cars/nissan/patrol/?badges=First%20Owner&sorting=date_desc"
+            "https://uae.dubizzle.com/ar/motors/used-cars/nissan/patrol/?sorting=date_desc&seller_type=OW"
         ),
     },
     {
         "name": "لكزس LX-Series (مالك أول)",
         "url": (
-            "https://uae.dubizzle.com/ar/motors/used-cars/lexus/lx-series/?sorting=date_desc&badges=First%20Owner"
+            "https://uae.dubizzle.com/ar/motors/used-cars/lexus/lx-series/?sorting=date_desc&seller_type=OW"
         ),
     },
     {
         "name": "هيونداي (مالك أول)",
         "url": (
-            "https://uae.dubizzle.com/ar/motors/used-cars/hyundai/?sorting=date_desc&badges=First%20Owner"
+            "https://uae.dubizzle.com/ar/motors/used-cars/hyundai/?sorting=date_desc&seller_type=OW"
         ),
     },
 ]
